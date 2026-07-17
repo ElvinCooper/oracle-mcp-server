@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "oracle-11g": {
+      "type": "local",
+      "command": [
+        "/ruta/al/proyecto/oracle-mcp-server/.venv/bin/python",
+        "-m",
+        "oracle_mcp.server"
+      ],
+      "enabled": true,
+      "environment": {
+        "ORACLE_USER": "mi_usuario",
+        "ORACLE_PASSWORD": "mi_password",
+        "ORACLE_HOST": "192.168.1.10",
+        "ORACLE_PORT": "1521",
+        "ORACLE_SID": "ORCL",
+        "ORACLE_CLIENT_LIB_DIR": "/opt/oracle/instantclient_11_2",
+        "ORACLE_ALLOW_WRITE": "false",
+        "ORACLE_MAX_ROWS": "200"
+      }
+    }
+  }
+}
