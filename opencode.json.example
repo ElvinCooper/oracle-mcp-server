@@ -1,23 +1,30 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "oracle-11g": {
+    "oracle": {
       "type": "local",
       "command": [
-        "/ruta/al/proyecto/oracle-mcp-server/.venv/bin/python",
+        "C:/ruta/completa/oracle-mcp-server/.venv/Scripts/python",
         "-m",
         "oracle_mcp.server"
       ],
       "enabled": true,
       "environment": {
-        "ORACLE_USER": "mi_usuario",
-        "ORACLE_PASSWORD": "mi_password",
-        "ORACLE_HOST": "192.168.1.10",
-        "ORACLE_PORT": "1521",
-        "ORACLE_SID": "ORCL",
-        "ORACLE_CLIENT_LIB_DIR": "/opt/oracle/instantclient_11_2",
-        "ORACLE_ALLOW_WRITE": "false",
-        "ORACLE_MAX_ROWS": "200"
+        "ORACLE_CONNECTIONS": "facturacion,clinica",
+        "ORACLE_CONN_FACTURACION_USER": "mi_usuario",
+        "ORACLE_CONN_FACTURACION_PASSWORD": "mi_password",
+        "ORACLE_CONN_FACTURACION_HOST": "192.168.1.10",
+        "ORACLE_CONN_FACTURACION_PORT": "1521",
+        "ORACLE_CONN_FACTURACION_SID": "ORCL",
+        "ORACLE_CONN_FACTURACION_CLIENT_LIB_DIR": "C:/oracle/instantclient_11_2",
+        "ORACLE_CONN_FACTURACION_ALLOW_WRITE": "false",
+        "ORACLE_CONN_FACTURACION_MAX_ROWS": "200",
+        "ORACLE_CONN_CLINICA_USER": "clinica_user",
+        "ORACLE_CONN_CLINICA_PASSWORD": "clinica_pass",
+        "ORACLE_CONN_CLINICA_HOST": "192.168.1.20",
+        "ORACLE_CONN_CLINICA_PORT": "1521",
+        "ORACLE_CONN_CLINICA_SID": "ORCL",
+        "ORACLE_CONN_CLINICA_CLIENT_LIB_DIR": "C:/oracle/instantclient_11_2"
       }
     }
   }

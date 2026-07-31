@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import re
 import threading
+import logging
 
 import oracledb
 
-from .config import OracleConfig
+from .config import OracleConfig, OracleConnectionConfig
+
+logger = logging.getLogger("oracle_mcp")
 
 _init_lock = threading.Lock()
 _thick_initialized = False
@@ -24,48 +27,94 @@ class QueryValidationError(ValueError):
     """Se lanza cuando una consulta no cumple las reglas de seguridad del MCP."""
 
 
-def init_thick_mode(config: OracleConfig) -> None:
+def init_thick_mode(connections: list[OracleConnectionConfig]) -> None:
     """Inicializa el Oracle Client en modo thick. Debe llamarse una sola vez,
-    antes de abrir cualquier conexion, porque Oracle 11g no soporta thin mode."""
+    antes de abrir cualquier conexion, porque Oracle 11g no soporta thin mode.
+    
+    Usa el client_lib_dir de la primera conexion que lo tenga definido.
+    """
     global _thick_initialized
     with _init_lock:
         if _thick_initialized:
             return
+        
+        # Buscar la primera conexion con client_lib_dir definido
+        lib_dir = None
+        for conn in connections:
+            if conn.client_lib_dir:
+                lib_dir = conn.client_lib_dir
+                break
+        
         kwargs = {}
-        if config.client_lib_dir:
-            kwargs["lib_dir"] = config.client_lib_dir
+        if lib_dir:
+            kwargs["lib_dir"] = lib_dir
         oracledb.init_oracle_client(**kwargs)
         _thick_initialized = True
+        logger.info("Oracle Client inicializado en modo thick")
 
 
 class OracleConnectionManager:
-    """Envuelve un pool de conexiones oracledb en modo thick."""
+    """Envuelve multipools de conexiones oracledb en modo thick."""
 
     def __init__(self, config: OracleConfig):
         self._config = config
-        self._pool: oracledb.ConnectionPool | None = None
+        self._pools: dict[str, oracledb.ConnectionPool] = {}
 
     def start(self) -> None:
-        init_thick_mode(self._config)
-        self._pool = oracledb.create_pool(
-            user=self._config.user,
-            password=self._config.password,
-            dsn=self._config.dsn,
-            min=self._config.pool_min,
-            max=self._config.pool_max,
-            increment=1,
-        )
+        """Inicializa pools para todas las conexiones configuradas."""
+        init_thick_mode(self._config.connections)
+        
+        for conn_config in self._config.connections:
+            try:
+                pool = oracledb.create_pool(
+                    user=conn_config.user,
+                    password=conn_config.password,
+                    dsn=conn_config.dsn,
+                    min=conn_config.pool_min,
+                    max=conn_config.pool_max,
+                    increment=1,
+                )
+                self._pools[conn_config.name] = pool
+                logger.info(
+                    "Pool '%s' listo (min=%s, max=%s)",
+                    conn_config.name,
+                    conn_config.pool_min,
+                    conn_config.pool_max,
+                )
+            except Exception as e:
+                logger.error("Error iniciando pool '%s': %s", conn_config.name, e)
 
     def stop(self) -> None:
-        if self._pool is not None:
-            self._pool.close(force=True)
-            self._pool = None
+        """Cierra todos los pools."""
+        for name, pool in self._pools.items():
+            try:
+                pool.close(force=True)
+                logger.info("Pool '%s' cerrado", name)
+            except Exception as e:
+                logger.error("Error cerrando pool '%s': %s", name, e)
+        self._pools.clear()
+
+    def get_pool(self, connection_name: str | None = None) -> oracledb.ConnectionPool:
+        """Retorna el pool para la conexion especificada.
+        
+        Si connection_name es None, usa la conexion por defecto.
+        """
+        if connection_name is None:
+            connection_name = self._config.default_connection.name
+        
+        if connection_name not in self._pools:
+            available = list(self._pools.keys())
+            raise RuntimeError(
+                f"Pool '{connection_name}' no disponible. "
+                f"Pools activos: {available}"
+            )
+        
+        return self._pools[connection_name]
 
     @property
-    def pool(self) -> oracledb.ConnectionPool:
-        if self._pool is None:
-            raise RuntimeError("El pool de conexiones no ha sido inicializado.")
-        return self._pool
+    def available_connections(self) -> list[str]:
+        """Retorna lista de nombres de conexiones disponibles."""
+        return list(self._pools.keys())
 
 
 def _first_keyword(sql: str) -> str:

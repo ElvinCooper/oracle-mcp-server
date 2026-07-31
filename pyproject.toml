@@ -1,13 +1,16 @@
 [project]
 name = "oracle-mcp-server"
 version = "0.1.0"
-description = "MCP server para conectar a Oracle 11g (thick mode) desde opencode / clientes MCP"
+description = "MCP server para conectar a Oracle 11g (thick mode) desde clientes MCP (opencode, Claude Code, Codex, etc.)"
 requires-python = ">=3.10"
 dependencies = [
     "mcp>=1.6.0",
     "oracledb>=2.0.0",
     "python-dotenv>=1.0.1",
 ]
+
+[project.scripts]
+oracle-mcp = "oracle_mcp.server:main"
 
 [build-system]
 requires = ["hatchling"]
