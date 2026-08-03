@@ -24,7 +24,7 @@ notepad .env
 .\.venv\Scripts\oracle-mcp
 ```
 
-Si ves `Pool '<nombre>' listo` en la salida, ya está funcionando.
+Si ves `Pools Oracle listos` en la salida, ya está funcionando.
 
 **Requisitos:** Python 3.10+ y Oracle Instant Client instalado.
 
@@ -201,18 +201,16 @@ Para mantener consistencia y facilitar el mantenimiento:
 
 Las variables pueden provenir de múltiples fuentes (por orden de prioridad):
 
-1. **opencode.jsonc** `environment` block (mayor prioridad)
+1. Variables ya definidas en el entorno del proceso (incluye el bloque
+   `environment` de `opencode.jsonc`) (mayor prioridad)
 2. **Variables del sistema Windows** (persistente)
-3. **Archivo `.env`** (cargado automáticamente por python-dotenv)
+3. **Archivo `.env`** (cargado por python-dotenv desde la raíz del proyecto)
 
-**Recomendación de seguridad:** No incluir credenciales en `opencode.jsonc`.
-Usar variables del sistema Windows para datos sensibles:
-
-```powershell
-# PowerShell - Configurar una vez
-[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_USER", "mi_usuario", "User")
-[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_PASSWORD", "mi_password", "User")
-```
+**Recomendación:** usa **una sola fuente de verdad**. La opción recomendada es
+mantener **todas las conexiones en el `.env`** (archivo en `.gitignore`, sin
+credenciales en `opencode.jsonc`). Para agregar una conexión, añade su nombre a
+`ORACLE_CONNECTIONS` y define sus variables `ORACLE_CONN_<NOMBRE>_*` en el
+mismo archivo.
 
 ## 4. Probarlo de forma independiente
 
@@ -233,9 +231,10 @@ oracle-mcp                       # si el venv está activo
 .venv/bin/oracle-mcp             # Linux/Mac
 ```
 
-Si ves en el log `Pool '<nombre>' listo`, la conexión en thick
-mode funcionó. El proceso queda esperando mensajes MCP por stdio (Ctrl+C
-para salir).
+Si ves en el log `Pools Oracle listos: N` seguido de
+`Conexiones Oracle disponibles: N` con la lista de conexiones, la conexión
+en thick mode funcionó. El proceso queda esperando mensajes MCP por stdio
+(Ctrl+C para salir).
 
 ## 5. Integración con clientes MCP
 
@@ -284,9 +283,8 @@ Define el servidor en el bloque `mcp` de `opencode.json` (o `~/.config/opencode/
 Un archivo de ejemplo (`opencode.json.example`) está incluido en el proyecto.
 
 > **Nota de seguridad:** el bloque `environment` de arriba incluye credenciales
-> solo con fines de ejemplo. Para datos sensibles, prefiere variables del
-> sistema Windows o el archivo `.env` (ver sección 3) y deja `environment` sin
-> credenciales.
+> solo con fines de ejemplo. La opción recomendada es omitir `environment` y
+> definir todas las conexiones en el archivo `.env` (ver sección 3).
 
 ### Claude Code
 
@@ -349,7 +347,8 @@ Cualquier cliente que soporte servidores MCP tipo `local`/`stdio` puede usar la 
 | env | Tus variables `ORACLE_CONN_*` (o ninguna si usas `.env`) |
 
 **Nota:** Si usas `.env` para las credenciales, el servidor las cargará
-automáticamente siempre que el proceso arranque desde la carpeta del proyecto.
+automáticamente desde la raíz del proyecto, sin importar el directorio desde
+el que se arranque el proceso.
 
 ### Puntos importantes
 

@@ -75,24 +75,21 @@ class OracleConnectionManager:
                     increment=1,
                 )
                 self._pools[conn_config.name] = pool
-                logger.info(
-                    "Pool '%s' listo (min=%s, max=%s)",
-                    conn_config.name,
-                    conn_config.pool_min,
-                    conn_config.pool_max,
-                )
             except Exception as e:
                 logger.error("Error iniciando pool '%s': %s", conn_config.name, e)
+        
+        logger.info("Pools Oracle listos: %d", len(self._pools))
 
     def stop(self) -> None:
         """Cierra todos los pools."""
+        count = len(self._pools)
         for name, pool in self._pools.items():
             try:
                 pool.close(force=True)
-                logger.info("Pool '%s' cerrado", name)
             except Exception as e:
                 logger.error("Error cerrando pool '%s': %s", name, e)
         self._pools.clear()
+        logger.info("Pools Oracle cerrados: %d", count)
 
     def get_pool(self, connection_name: str | None = None) -> oracledb.ConnectionPool:
         """Retorna el pool para la conexion especificada.
@@ -110,11 +107,6 @@ class OracleConnectionManager:
             )
         
         return self._pools[connection_name]
-
-    @property
-    def available_connections(self) -> list[str]:
-        """Retorna lista de nombres de conexiones disponibles."""
-        return list(self._pools.keys())
 
 
 def _first_keyword(sql: str) -> str:

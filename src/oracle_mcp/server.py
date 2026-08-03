@@ -45,22 +45,9 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     logger.info("Inicializando Oracle Client en modo thick y pool de conexiones...")
     conn_mgr.start()
     
-    # Log de conexiones disponibles
+    logger.info("Conexiones Oracle disponibles: %d", len(config.connections))
     for conn in config.connections:
-        logger.info(
-            "Conexion '%s' configurada: %s@%s:%s/%s",
-            conn.name,
-            conn.user,
-            conn.host,
-            conn.port,
-            conn.sid or conn.service_name or "?",
-        )
-    
-    logger.info(
-        "Conexiones activas: %s (default: '%s')",
-        conn_mgr.available_connections,
-        config.default_connection.name,
-    )
+        logger.info("  - %s", conn.name)
     
     try:
         yield AppContext(config=config, conn_mgr=conn_mgr)
