@@ -76,6 +76,9 @@ la lista (conexión por defecto).
 
 ## 2. Instalación
 
+La instalación se realiza con el script **`.\setup.ps1`** (Windows), que crea
+el `.venv`, instala las dependencias y copia `.env` desde `.env.example`.
+
 ### Automática (Windows)
 
 ```powershell
