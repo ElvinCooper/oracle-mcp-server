@@ -212,6 +212,66 @@ credenciales en `opencode.jsonc`). Para agregar una conexión, añade su nombre 
 `ORACLE_CONNECTIONS` y define sus variables `ORACLE_CONN_<NOMBRE>_*` en el
 mismo archivo.
 
+### Credenciales fuera del `.env` (variables del sistema)
+
+Si prefieres no guardar credenciales en texto plano dentro del `.env`, puedes
+definir el usuario y la contraseña como variables de entorno del sistema. Es
+**totalmente opcional**: si no defines estas variables, el servidor usa las
+del `.env` como siempre.
+
+> **Importante:** el proceso debe arrancar **después** de crear la variable.
+> Reinicia la terminal y el cliente MCP para que hereden el nuevo entorno.
+
+**Opción A — Variable del sistema con el mismo nombre (recomendada):**
+
+El nombre de la variable debe coincidir con el de la conexión
+(`ORACLE_CONN_<NOMBRE>_USER` / `ORACLE_CONN_<NOMBRE>_PASSWORD`). Estas
+variables tienen prioridad sobre las del `.env` (python-dotenv no sobrescribe
+variables ya definidas), por lo que se pueden combinar: los secretos en el
+sistema y el resto de la configuración en el `.env`. Ejemplo para la conexión
+`facturacion`:
+
+```powershell
+# Windows (scope "User": solo tu usuario de Windows)
+[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_USER", "mi_usuario", "User")
+[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_PASSWORD", "mi_password", "User")
+```
+
+```bash
+# Linux / Mac (agrega a ~/.bashrc o ~/.zshrc y recarga: source ~/.bashrc)
+export ORACLE_CONN_FACTURACION_USER="mi_usuario"
+export ORACLE_CONN_FACTURACION_PASSWORD="mi_password"
+```
+
+**Opción B — Referencia desde el `.env` (nombre libre):**
+
+Puedes usar un nombre de variable propio en el sistema y referenciarlo desde
+el `.env` con `${VAR}`:
+
+```dotenv
+ORACLE_CONN_FACTURACION_USER=${ORACLE_FACTURACION_USER}
+ORACLE_CONN_FACTURACION_PASSWORD=${ORACLE_FACTURACION_PASSWORD}
+```
+
+Los valores de `ORACLE_FACTURACION_USER` / `ORACLE_FACTURACION_PASSWORD` se
+definen como variables del sistema. Si la variable referenciada no existe,
+python-dotenv la deja vacía y el servidor falla con
+`Faltan variables obligatorias`, indicando cuál falta.
+
+**Verificar que la variable quedó definida:**
+
+```powershell
+[Environment]::GetEnvironmentVariable("ORACLE_CONN_FACTURACION_PASSWORD", "User")
+```
+
+```bash
+echo $ORACLE_CONN_FACTURACION_PASSWORD
+```
+
+También puedes usar los scripts `set-secrets.ps1` (Windows) y `set-secrets.sh`
+(Linux/Mac) incluidos en el proyecto para fijar usuario y contraseña de forma
+interactiva.
+
 ## 4. Probarlo de forma independiente
 
 Puedes levantar el servidor manualmente para verificar que conecta:
