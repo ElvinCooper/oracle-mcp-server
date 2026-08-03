@@ -215,6 +215,14 @@ credenciales en `opencode.jsonc`). Para agregar una conexión, añade su nombre 
 `ORACLE_CONNECTIONS` y define sus variables `ORACLE_CONN_<NOMBRE>_*` en el
 mismo archivo.
 
+**Tolerancia a configuraciones incompletas:** si una conexión en
+`ORACLE_CONNECTIONS` no tiene sus variables obligatorias
+(`ORACLE_CONN_<NOMBRE>_USER`, `_PASSWORD`, `_HOST`) o tiene valores inválidos
+(p. ej. puerto no numérico), el servidor la **omite** al arrancar, registra un
+warning en consola con el nombre y el motivo, y continúa con las conexiones
+válidas. Solo si **ninguna** conexión es válida, el servidor se detiene con un
+error.
+
 ### Credenciales fuera del `.env` (variables del sistema)
 
 Si prefieres no guardar credenciales en texto plano dentro del `.env`, puedes

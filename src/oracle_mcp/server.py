@@ -48,6 +48,13 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     logger.info("Conexiones Oracle disponibles: %d", len(config.connections))
     for conn in config.connections:
         logger.info("  - %s", conn.name)
+
+    if config.skipped:
+        logger.warning(
+            "Conexiones omitidas (%d) por configuracion incompleta: %s",
+            len(config.skipped),
+            ", ".join(config.skipped),
+        )
     
     try:
         yield AppContext(config=config, conn_mgr=conn_mgr)

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger("oracle_mcp.config")
 
 load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
@@ -53,6 +56,7 @@ class OracleConnectionConfig:
 class OracleConfig:
     """Configuracion principal con soporte para multiples conexiones."""
     connections: list[OracleConnectionConfig]
+    skipped: list[str] = field(default_factory=list)
 
     @property
     def default_connection(self) -> OracleConnectionConfig:
@@ -120,12 +124,26 @@ def _load_multi_config() -> OracleConfig:
         )
 
     connections = []
+    skipped = []
     for name in connection_names:
         prefix = f"ORACLE_CONN_{name.upper()}"
-        conn = _load_connection_config(name, prefix)
+        try:
+            conn = _load_connection_config(name, prefix)
+        except (RuntimeError, ValueError) as exc:
+            logger.warning(
+                "Conexion '%s' omitida por configuracion incompleta: %s", name, exc
+            )
+            skipped.append(name)
+            continue
         connections.append(conn)
 
-    return OracleConfig(connections=connections)
+    if not connections:
+        raise RuntimeError(
+            "No se pudo cargar ninguna conexion. "
+            f"Omitidas por configuracion incompleta: {', '.join(skipped)}"
+        )
+
+    return OracleConfig(connections=connections, skipped=skipped)
 
 
 def load_config() -> OracleConfig:
