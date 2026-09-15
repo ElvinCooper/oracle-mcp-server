@@ -129,6 +129,39 @@ def test_config_multi_omite_puerto_invalido(monkeypatch):
     assert config.skipped == ["mal"]
 
 
+def test_config_multi_configuracion_independiente_por_conexion(monkeypatch):
+    _set_multi(monkeypatch, ["rw", "ro"])
+    monkeypatch.setenv("ORACLE_CONN_RW_ALLOW_WRITE", "true")
+    monkeypatch.setenv("ORACLE_CONN_RW_MAX_ROWS", "500")
+    monkeypatch.setenv("ORACLE_CONN_RW_CONNECT_TIMEOUT", "30")
+    monkeypatch.setenv("ORACLE_CONN_RW_POOL_MIN", "2")
+    monkeypatch.setenv("ORACLE_CONN_RW_POOL_MAX", "8")
+    monkeypatch.setenv("ORACLE_CONN_RW_SERVICE_NAME", "XDB")
+
+    config = load_config()
+    rw, ro = config.connections
+
+    assert rw.name == "rw"
+    assert rw.allow_write is True
+    assert rw.max_rows == 500
+    assert rw.connect_timeout == 30
+    assert rw.pool_min == 2
+    assert rw.pool_max == 8
+    assert rw.service_name == "XDB"
+    assert rw.sid == "ORCL"  # SID sigue presente; el dsn prefiere SERVICE_NAME
+
+    assert ro.name == "ro"
+    assert ro.allow_write is False
+    assert ro.max_rows == 200
+    assert ro.connect_timeout == 10
+    assert ro.pool_min == 1
+    assert ro.pool_max == 4
+    assert ro.service_name is None
+
+    assert config.get_connection("rw") is rw
+    assert config.get_connection("ro") is ro
+
+
 def test_config_multi_todas_incompletas_lanza(monkeypatch):
     _set_multi(monkeypatch, ["a", "b"])
     monkeypatch.delenv("ORACLE_CONN_A_PASSWORD", raising=False)

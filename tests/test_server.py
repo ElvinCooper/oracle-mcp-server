@@ -244,13 +244,64 @@ def test_run_query_trunca_con_max_rows():
     assert result["limit_applied"] == 2
 
 
-def test_run_query_rechaza_escritura_sin_usar_pool():
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "INSERT INTO t VALUES (1)",
+        "UPDATE t SET a = 1",
+        "DELETE FROM t",
+        "MERGE INTO t USING s ON (1 = 1) WHEN MATCHED THEN UPDATE SET a = 1",
+        "CREATE TABLE t (a NUMBER)",
+        "ALTER TABLE t ADD c NUMBER",
+        "DROP TABLE t",
+        "TRUNCATE TABLE t",
+        "GRANT SELECT ON t TO u",
+        "REVOKE SELECT ON t FROM u",
+        "REPLACE INTO t VALUES (1)",
+    ],
+)
+def test_run_query_rechaza_escrituras_sin_usar_pool(sql):
     pool = FakePool(_cursor())
     app = _make_app(pools={"a": pool})
-    result = server.run_query(_ctx(app), sql="DELETE FROM t", connection="a")
+    result = server.run_query(_ctx(app), sql=sql, connection="a")
     assert "error" in result
     assert "SELECT" in result["error"]
     assert pool.acquisitions == 0
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT 1 FROM dual",
+        "WITH x AS (SELECT 1 FROM dual) SELECT * FROM x",
+    ],
+)
+def test_run_query_acepta_select_y_with(sql):
+    cursor = _cursor(rows=[(1,)], description=[("N",)])
+    app = _make_app(pools={"a": FakePool(cursor)})
+    result = server.run_query(_ctx(app), sql=sql, connection="a")
+    assert cursor.executed == (sql, {})
+    assert result["rows"] == [{"N": 1}]
+    assert result["truncated"] is False
+
+
+def test_run_query_rechaza_multiples_sentencias():
+    pool = FakePool(_cursor())
+    app = _make_app(pools={"a": pool})
+    result = server.run_query(
+        _ctx(app),
+        sql="SELECT 1 FROM dual; SELECT 2 FROM dual",
+        connection="a",
+    )
+    assert "multiples sentencias" in result["error"]
+    assert pool.acquisitions == 0
+
+
+def test_run_query_max_rows_cero_usa_default_de_config():
+    cursor = _cursor(rows=[(1,)], description=[("N",)])
+    app = _make_app(pools={"a": FakePool(cursor)})
+    result = server.run_query(_ctx(app), sql="SELECT 1 FROM dual", connection="a", max_rows=0)
+    assert result["limit_applied"] == 200
 
 
 def test_run_query_connection_desconocida_lanza():
@@ -312,3 +363,22 @@ def test_execute_statement_sentencia_no_soportada():
         _ctx(app), sql="PURGE TABLE t", connection="a", confirm=True
     )
     assert "no reconocida" in result["error"]
+
+
+def test_execute_statement_config_por_conexion():
+    conns = [
+        make_connection(name="rw", allow_write=True),
+        make_connection(name="ro", allow_write=False),
+    ]
+    ro_pool = FakePool(_cursor())
+    rw_pool = FakePool(_cursor(rowcount=1))
+    app = _make_app(pools={"rw": rw_pool, "ro": ro_pool}, connections=conns)
+    sql = "INSERT INTO t VALUES (1)"
+
+    result_ro = server.execute_statement(_ctx(app), sql=sql, connection="ro", confirm=True)
+    assert "ORACLE_ALLOW_WRITE" in result_ro["error"]
+    assert ro_pool.acquisitions == 0
+
+    result_rw = server.execute_statement(_ctx(app), sql=sql, connection="rw", confirm=True)
+    assert result_rw["status"] == "ok"
+    assert rw_pool.acquisitions == 1

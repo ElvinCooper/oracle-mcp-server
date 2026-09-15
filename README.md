@@ -304,7 +304,7 @@ pip install -e ".[dev]"   # instala pytest y las dependencias de desarrollo
 pytest                    # o: python -m pytest
 ```
 
-Son **87 tests** que cubren: carga legacy y multi-conexión, omisión de
+Son **114 tests** que cubren: carga legacy y multi-conexión, omisión de
 conexiones incompletas (tolerancia), DSN por SID / SERVICE_NAME, validación
 solo-`SELECT` y doble confirmación de escritura (`ALLOW_WRITE` + `confirm`),
 serialización de LOBs y las 5 tools del servidor (conexión por defecto,

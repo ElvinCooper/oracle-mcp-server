@@ -110,6 +110,7 @@ def test_select_only_acepta_lectura(sql):
         "ALTER TABLE t ADD c NUMBER",
         "DROP TABLE t",
         "TRUNCATE TABLE t",
+        "MERGE INTO t USING s ON (1 = 1) WHEN MATCHED THEN UPDATE SET a = 1",
         "GRANT SELECT ON t TO u",
         "FOO 1",
     ],
@@ -128,9 +129,25 @@ def test_select_only_permite_punto_y_coma_final():
     assert_select_only("SELECT 1;")
 
 
-def test_write_allowed_deshabilitado_menciona_allow_write():
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "INSERT INTO t VALUES (1)",
+        "UPDATE t SET a = 1",
+        "DELETE FROM t",
+        "MERGE INTO t USING s ON (1 = 1) WHEN MATCHED THEN UPDATE SET a = 1",
+        "CREATE TABLE t (a NUMBER)",
+        "ALTER TABLE t ADD c NUMBER",
+        "DROP TABLE t",
+        "TRUNCATE TABLE t",
+        "GRANT SELECT ON t TO u",
+        "REVOKE SELECT ON t FROM u",
+        "REPLACE INTO t VALUES (1)",
+    ],
+)
+def test_write_allowed_deshabilitado_rechaza_toda_escritura(sql):
     with pytest.raises(QueryValidationError, match="ORACLE_ALLOW_WRITE"):
-        assert_write_allowed("INSERT INTO t VALUES (1)", allow_write=False)
+        assert_write_allowed(sql, allow_write=False)
 
 
 @pytest.mark.parametrize(
