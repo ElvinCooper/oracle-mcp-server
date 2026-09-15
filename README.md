@@ -5,11 +5,18 @@
 
 > Reemplaza `TU_USUARIO` por tu usuario de GitHub para que el badge de CI apunte a tu repositorio.
 
-Servidor MCP (Model Context Protocol) en Python para conectar a **Oracle 11g**
-usando `python-oracledb` en **modo thick** (obligatorio en 11g, ya que el modo
-thin del driver solo soporta Oracle 12.1+). Pensado para usarse desde
-[opencode](https://opencode.ai) u otro cliente MCP compatible con servidores
-locales (stdio).
+**Oracle Database MCP Server**: servidor MCP (Model Context Protocol) en
+**Python** que permite a agentes de IA y clientes compatibles con MCP
+interactuar con bases **Oracle Database** a través de **`python-oracledb`**.
+
+> A Python-based Model Context Protocol (MCP) server that enables AI coding
+> agents and MCP-compatible clients to interact with Oracle Database
+> environments through python-oracledb.
+
+Usa `python-oracledb` en **modo thick** con **Oracle Instant Client**, con
+soporte orientado a **entornos Oracle antiguos, incluido Oracle 11g** (el modo
+thin del driver solo soporta Oracle 12.1+; las versiones posteriores dependen
+del soporte del propio driver). Ver [Notas sobre Oracle 11g y modo thick](#8-notas-sobre-oracle-11g-y-modo-thick).
 
 **Soporta múltiples conexiones a Oracle** y funciona con cualquier cliente MCP: opencode, Claude Code, Cursor, Codex, Continue.dev, etc.
 
@@ -61,15 +68,35 @@ la lista (conexión por defecto).
   incluye `row_count`, `truncated` (si quedaron filas sin devolver) y
   `limit_applied`.
 
-### Seguridad por diseño
+### Seguridad
 
-- Por defecto **solo lectura**: `run_query` valida que la sentencia empiece
-  con `SELECT`/`WITH` y rechaza múltiples sentencias separadas por `;`.
-- `execute_statement` está bloqueada salvo que definas
-  `ORACLE_CONN_<NOMBRE>_ALLOW_WRITE=true` (o `ORACLE_ALLOW_WRITE=true` en el
-  modo legacy) en el entorno **y** pases `confirm=true` en la llamada (doble
-  seguro).
-- Las credenciales viven en variables de entorno, nunca hardcodeadas.
+#### Operaciones de lectura (read-only)
+
+`run_query` está diseñada para **operaciones de lectura** y valida cada
+consulta: exige que la sentencia comience con `SELECT` o `WITH` y rechaza
+múltiples sentencias separadas por `;`, bloqueando por diseño intentos de
+inyección con sentencias de escritura encadenadas.
+
+#### Operaciones de escritura (write operations)
+
+`execute_statement` ejecuta `INSERT/UPDATE/DELETE/DDL` y está **bloqueada por
+defecto**. Habilitarla requiere **dos condiciones explícitas**:
+
+1. **Configuración:** `ORACLE_CONN_<NOMBRE>_ALLOW_WRITE=true` (o
+   `ORACLE_ALLOW_WRITE=true` en modo legacy), definida **por conexión**.
+2. **Llamada:** pasar `confirm=true` en cada invocación.
+
+El permiso se configura de forma explícita y auditable en cada conexión, y
+además se confirma en cada uso (un **doble seguro**). Habilitar operaciones de
+escritura debe ser una **decisión consciente**: por defecto todas las
+conexiones son de solo lectura y se recomienda conservar `ALLOW_WRITE=false`
+salvo que una conexión específica realmente lo requiera.
+
+#### Credenciales
+
+Las credenciales viven en variables de entorno (o en el archivo `.env`), **nunca
+hardcodeadas** en el código, y en este documento se muestran únicamente
+placeholders de ejemplo (`your_user`, `your_password`).
 
 ## 1. Requisitos previos
 
@@ -124,9 +151,9 @@ Formato para múltiples conexiones:
 ORACLE_CONNECTIONS=facturacion,clinica
 
 # Conexion "facturacion"
-ORACLE_CONN_FACTURACION_USER=mi_usuario
-ORACLE_CONN_FACTURACION_PASSWORD=mi_password
-ORACLE_CONN_FACTURACION_HOST=192.168.1.10
+ORACLE_CONN_FACTURACION_USER=your_user
+ORACLE_CONN_FACTURACION_PASSWORD=your_password
+ORACLE_CONN_FACTURACION_HOST=your_oracle_host
 ORACLE_CONN_FACTURACION_PORT=1521
 ORACLE_CONN_FACTURACION_SID=ORCL
 ORACLE_CONN_FACTURACION_CLIENT_LIB_DIR=/opt/oracle/instantclient_11_2
@@ -134,9 +161,9 @@ ORACLE_CONN_FACTURACION_ALLOW_WRITE=false
 ORACLE_CONN_FACTURACION_MAX_ROWS=200
 
 # Conexion "clinica"
-ORACLE_CONN_CLINICA_USER=clinica_user
-ORACLE_CONN_CLINICA_PASSWORD=clinica_pass
-ORACLE_CONN_CLINICA_HOST=192.168.1.20
+ORACLE_CONN_CLINICA_USER=your_user
+ORACLE_CONN_CLINICA_PASSWORD=your_password
+ORACLE_CONN_CLINICA_HOST=your_oracle_host
 ORACLE_CONN_CLINICA_PORT=1521
 ORACLE_CONN_CLINICA_SID=ORCL
 ORACLE_CONN_CLINICA_CLIENT_LIB_DIR=/opt/oracle/instantclient_11_2
@@ -147,9 +174,9 @@ ORACLE_CONN_CLINICA_CLIENT_LIB_DIR=/opt/oracle/instantclient_11_2
 Si `ORACLE_CONNECTIONS` no está definido, el servidor busca variables legacy:
 
 ```bash
-ORACLE_USER=mi_usuario
-ORACLE_PASSWORD=mi_password
-ORACLE_HOST=192.168.1.10
+ORACLE_USER=your_user
+ORACLE_PASSWORD=your_password
+ORACLE_HOST=your_oracle_host
 ORACLE_PORT=1521
 ORACLE_SID=ORCL
 ORACLE_CLIENT_LIB_DIR=/opt/oracle/instantclient_11_2
@@ -255,14 +282,14 @@ sistema y el resto de la configuración en el `.env`. Ejemplo para la conexión
 
 ```powershell
 # Windows (scope "User": solo tu usuario de Windows)
-[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_USER", "mi_usuario", "User")
-[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_PASSWORD", "mi_password", "User")
+[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_USER", "your_user", "User")
+[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_PASSWORD", "your_password", "User")
 ```
 
 ```bash
 # Linux / Mac (agrega a ~/.bashrc o ~/.zshrc y recarga: source ~/.bashrc)
-export ORACLE_CONN_FACTURACION_USER="mi_usuario"
-export ORACLE_CONN_FACTURACION_PASSWORD="mi_password"
+export ORACLE_CONN_FACTURACION_USER="your_user"
+export ORACLE_CONN_FACTURACION_PASSWORD="your_password"
 ```
 
 **Opción B — Referencia desde el `.env` (nombre libre):**
@@ -363,15 +390,15 @@ Define el servidor en el bloque `mcp` de `opencode.json` (o `~/.config/opencode/
       "enabled": true,
       "environment": {
         "ORACLE_CONNECTIONS": "facturacion,clinica",
-        "ORACLE_CONN_FACTURACION_USER": "mi_usuario",
-        "ORACLE_CONN_FACTURACION_PASSWORD": "mi_password",
-        "ORACLE_CONN_FACTURACION_HOST": "192.168.1.10",
+        "ORACLE_CONN_FACTURACION_USER": "your_user",
+        "ORACLE_CONN_FACTURACION_PASSWORD": "your_password",
+        "ORACLE_CONN_FACTURACION_HOST": "your_oracle_host",
         "ORACLE_CONN_FACTURACION_PORT": "1521",
         "ORACLE_CONN_FACTURACION_SID": "ORCL",
         "ORACLE_CONN_FACTURACION_CLIENT_LIB_DIR": "C:/oracle/instantclient_11_2",
-        "ORACLE_CONN_CLINICA_USER": "clinica_user",
-        "ORACLE_CONN_CLINICA_PASSWORD": "clinica_pass",
-        "ORACLE_CONN_CLINICA_HOST": "192.168.1.20",
+        "ORACLE_CONN_CLINICA_USER": "your_user",
+        "ORACLE_CONN_CLINICA_PASSWORD": "your_password",
+        "ORACLE_CONN_CLINICA_HOST": "your_oracle_host",
         "ORACLE_CONN_CLINICA_PORT": "1521",
         "ORACLE_CONN_CLINICA_SID": "ORCL",
         "ORACLE_CONN_CLINICA_CLIENT_LIB_DIR": "C:/oracle/instantclient_11_2"
@@ -400,9 +427,9 @@ Agrega el servidor en `.claude.json` (en la raíz del proyecto o global en `%USE
       "args": ["-m", "oracle_mcp.server"],
       "env": {
         "ORACLE_CONNECTIONS": "facturacion",
-        "ORACLE_CONN_FACTURACION_USER": "mi_usuario",
-        "ORACLE_CONN_FACTURACION_PASSWORD": "mi_password",
-        "ORACLE_CONN_FACTURACION_HOST": "192.168.1.10",
+        "ORACLE_CONN_FACTURACION_USER": "your_user",
+        "ORACLE_CONN_FACTURACION_PASSWORD": "your_password",
+        "ORACLE_CONN_FACTURACION_HOST": "your_oracle_host",
         "ORACLE_CONN_FACTURACION_PORT": "1521",
         "ORACLE_CONN_FACTURACION_SID": "ORCL",
         "ORACLE_CONN_FACTURACION_CLIENT_LIB_DIR": "C:\\oracle\\instantclient_11_2"
@@ -425,9 +452,9 @@ En `./cursor/mcp.json` del proyecto:
       "args": ["-m", "oracle_mcp.server"],
       "env": {
         "ORACLE_CONNECTIONS": "facturacion",
-        "ORACLE_CONN_FACTURACION_USER": "mi_usuario",
-        "ORACLE_CONN_FACTURACION_PASSWORD": "mi_password",
-        "ORACLE_CONN_FACTURACION_HOST": "192.168.1.10",
+        "ORACLE_CONN_FACTURACION_USER": "your_user",
+        "ORACLE_CONN_FACTURACION_PASSWORD": "your_password",
+        "ORACLE_CONN_FACTURACION_HOST": "your_oracle_host",
         "ORACLE_CONN_FACTURACION_PORT": "1521",
         "ORACLE_CONN_FACTURACION_SID": "ORCL",
         "ORACLE_CONN_FACTURACION_CLIENT_LIB_DIR": "C:\\oracle\\instantclient_11_2"
@@ -504,7 +531,7 @@ oracle-mcp-server/
 ├── opencode.json.example
 ├── .github/
 │   └── workflows/
-│       └── ci.yml       # CI: tests (Python 3.10–3.14) y build del paquete
+│       └── ci.yml       # CI: tests (Python 3.10–3.12) y build del paquete
 ├── src/
 │   └── oracle_mcp/
 │       ├── __init__.py
