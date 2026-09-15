@@ -538,3 +538,8 @@ oracle-mcp-server/
   agregar un `ALLOWED_TABLES` o un usuario Oracle con permisos acotados
   (grant solo sobre las tablas necesarias) en vez de confiar únicamente en
   la validación de la tool.
+
+## 12. Licencia
+
+Este proyecto está bajo la licencia **MIT** (ver [LICENSE](LICENSE)).
+Copyright (c) 2026 Elvin Cooper.
