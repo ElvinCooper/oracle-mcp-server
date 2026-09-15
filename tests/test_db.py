@@ -4,9 +4,9 @@ import pytest
 
 from oracle_mcp.config import OracleConfig
 from oracle_mcp.db import (
+    _WRITE_KEYWORDS,
     OracleConnectionManager,
     QueryValidationError,
-    _WRITE_KEYWORDS,
     _first_keyword,
     _serialize,
     assert_select_only,

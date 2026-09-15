@@ -231,4 +231,4 @@ def test_dsn_con_service_name():
 def test_dsn_sin_sid_ni_service_lanza():
     conn = make_connection(name="a", sid=None, service_name=None)
     with pytest.raises(RuntimeError, match="ORACLE_SID o ORACLE_SERVICE_NAME"):
-        conn.dsn
+        _ = conn.dsn

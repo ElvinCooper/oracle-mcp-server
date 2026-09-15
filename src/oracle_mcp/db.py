@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import threading
-import logging
 
 import oracledb
 
@@ -30,21 +30,21 @@ class QueryValidationError(ValueError):
 def init_thick_mode(connections: list[OracleConnectionConfig]) -> None:
     """Inicializa el Oracle Client en modo thick. Debe llamarse una sola vez,
     antes de abrir cualquier conexion, porque Oracle 11g no soporta thin mode.
-    
+
     Usa el client_lib_dir de la primera conexion que lo tenga definido.
     """
     global _thick_initialized
     with _init_lock:
         if _thick_initialized:
             return
-        
+
         # Buscar la primera conexion con client_lib_dir definido
         lib_dir = None
         for conn in connections:
             if conn.client_lib_dir:
                 lib_dir = conn.client_lib_dir
                 break
-        
+
         kwargs = {}
         if lib_dir:
             kwargs["lib_dir"] = lib_dir
@@ -63,7 +63,7 @@ class OracleConnectionManager:
     def start(self) -> None:
         """Inicializa pools para todas las conexiones configuradas."""
         init_thick_mode(self._config.connections)
-        
+
         for conn_config in self._config.connections:
             try:
                 pool = oracledb.create_pool(
@@ -77,7 +77,7 @@ class OracleConnectionManager:
                 self._pools[conn_config.name] = pool
             except Exception as e:
                 logger.error("Error iniciando pool '%s': %s", conn_config.name, e)
-        
+
         logger.info("Pools Oracle listos: %d", len(self._pools))
 
     def stop(self) -> None:
@@ -93,19 +93,19 @@ class OracleConnectionManager:
 
     def get_pool(self, connection_name: str | None = None) -> oracledb.ConnectionPool:
         """Retorna el pool para la conexion especificada.
-        
+
         Si connection_name es None, usa la conexion por defecto.
         """
         if connection_name is None:
             connection_name = self._config.default_connection.name
-        
+
         if connection_name not in self._pools:
             available = list(self._pools.keys())
             raise RuntimeError(
                 f"Pool '{connection_name}' no disponible. "
                 f"Pools activos: {available}"
             )
-        
+
         return self._pools[connection_name]
 
 
@@ -143,7 +143,7 @@ def rows_to_dicts(cursor: oracledb.Cursor, rows: list) -> list[dict]:
     columns = [col[0] for col in cursor.description]
     result = []
     for row in rows:
-        result.append({col: _serialize(val) for col, val in zip(columns, row)})
+        result.append({col: _serialize(val) for col, val in zip(columns, row, strict=False)})
     return result
 
 
