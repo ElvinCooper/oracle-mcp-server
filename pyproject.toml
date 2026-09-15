@@ -36,7 +36,10 @@ dependencies = [
 oracle-mcp = "oracle_mcp.server:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
 
 [build-system]
 requires = ["hatchling"]
