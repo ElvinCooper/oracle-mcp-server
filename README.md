@@ -1,5 +1,10 @@
 # oracle-mcp-server
 
+[![CI](https://github.com/TU_USUARIO/oracle-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/TU_USUARIO/oracle-mcp-server/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> Reemplaza `TU_USUARIO` por tu usuario de GitHub para que el badge de CI apunte a tu repositorio.
+
 Servidor MCP (Model Context Protocol) en Python para conectar a **Oracle 11g**
 usando `python-oracledb` en **modo thick** (obligatorio en 11g, ya que el modo
 thin del driver solo soporta Oracle 12.1+). Pensado para usarse desde
@@ -95,6 +100,12 @@ source .venv/bin/activate        # Linux/Mac
 # .venv\Scripts\activate         # Windows
 pip install -e .
 ```
+
+> **Nota de versiones:** el proyecto usa la API de **MCP 1.x**
+> (`mcp.server.fastmcp`). Tanto `pyproject.toml` como `requirements.txt`
+> fijan `mcp>=1.6.0,<2` para evitar que una instalación resuelva `mcp` 2.x
+> (que eliminó esa API). Si en tu entorno aparece `mcp` 2.x, reinstala con el
+> pin: `pip install -e ".[dev]"` (o `pip install "mcp>=1.6.0,<2"`).
 
 ## 3. Configuración
 
@@ -283,7 +294,26 @@ También puedes usar los scripts `set-secrets.ps1` (Windows) y `set-secrets.sh`
 (Linux/Mac) incluidos en el proyecto para fijar usuario y contraseña de forma
 interactiva.
 
-## 4. Probarlo de forma independiente
+## 4. Pruebas
+
+La suite usa **pytest** y **no necesita Oracle**: `test_server.py` sustituye
+los pool/cursor de la base por dobles en memoria.
+
+```bash
+pip install -e ".[dev]"   # instala pytest y las dependencias de desarrollo
+pytest                    # o: python -m pytest
+```
+
+Son **87 tests** que cubren: carga legacy y multi-conexión, omisión de
+conexiones incompletas (tolerancia), DSN por SID / SERVICE_NAME, validación
+solo-`SELECT` y doble confirmación de escritura (`ALLOW_WRITE` + `confirm`),
+serialización de LOBs y las 5 tools del servidor (conexión por defecto,
+`max_rows` y truncado incluidos).
+
+En **CI** (GitHub Actions) la suite corre en Python 3.10–3.14 y un segundo job
+verifica que el paquete se construye con `python -m build`.
+
+## 5. Probarlo de forma independiente
 
 Puedes levantar el servidor manualmente para verificar que conecta:
 
@@ -307,7 +337,7 @@ Si ves en el log `Pools Oracle listos: N` seguido de
 en thick mode funcionó. El proceso queda esperando mensajes MCP por stdio
 (Ctrl+C para salir).
 
-## 5. Integración con clientes MCP
+## 6. Integración con clientes MCP
 
 El servidor se comunica por **STDIO** (estándar en MCP para procesos locales).
 Cada cliente MCP tiene su propia configuración; aquí están las más comunes.
@@ -425,9 +455,9 @@ el que se arranque el proceso.
 
 - Usa la ruta **absoluta** al Python del `.venv`
 - Reinicia/recarga el cliente MCP después de editar la configuración
-- Puedes verificar que el servidor responde con el comando de prueba de la sección 4
+- Puedes verificar que el servidor responde con el comando de prueba de la sección 5
 
-## 6. Uso de múltiples conexiones
+## 7. Uso de múltiples conexiones
 
 Una vez configuradas las conexiones, puedes usarlas en las tools:
 
@@ -445,7 +475,7 @@ run_query("SELECT * FROM pacientes", connection="clinica")
 list_connections()
 ```
 
-## 7. Notas sobre Oracle 11g y modo thick
+## 8. Notas sobre Oracle 11g y modo thick
 
 - `oracledb.init_oracle_client(lib_dir=...)` se llama **una sola vez**,
   antes de abrir cualquier conexión (lo hace `db.py` automáticamente al
@@ -461,24 +491,35 @@ list_connections()
   `TNS_ADMIN` en `environment` dentro de `opencode.json` y ajustar `db.py`
   para usar `dsn` directamente por alias TNS en vez de `makedsn`.
 
-## 8. Estructura del proyecto
+## 9. Estructura del proyecto
 
 ```
 oracle-mcp-server/
+├── LICENSE
+├── README.md
 ├── pyproject.toml
+├── requirements.txt
 ├── setup.ps1      # Script de instalación automática (Windows)
 ├── .env.example
 ├── opencode.json.example
-├── README.md
-└── src/
-    └── oracle_mcp/
-        ├── __init__.py
-        ├── config.py     # Carga de variables de entorno (multi-conexión)
-        ├── db.py          # Init thick mode, multipools, validación SELECT-only
-        └── server.py      # Servidor MCP (FastMCP) con tools multi-conexión
+├── .github/
+│   └── workflows/
+│       └── ci.yml       # CI: tests (Python 3.10–3.14) y build del paquete
+├── src/
+│   └── oracle_mcp/
+│       ├── __init__.py
+│       ├── config.py     # Carga de variables de entorno (multi-conexión)
+│       ├── db.py          # Init thick mode, multipools, validación SELECT-only
+│       └── server.py      # Servidor MCP (FastMCP) con tools multi-conexión
+└── tests/
+    ├── helpers.py      # make_connection() con valores por defecto
+    ├── conftest.py     # limpia variables ORACLE_*/OX_* entre tests
+    ├── test_config.py  # carga de configuración legacy y multi-conexión
+    ├── test_db.py      # thick mode, validación, serialización de LOBs
+    └── test_server.py  # tools MCP con pools ficticios
 ```
 
-## 9. Solución de Problemas
+## 10. Solución de Problemas
 
 | Problema | Causa Común | Solución |
 |----------|-------------|----------|
@@ -489,7 +530,7 @@ oracle-mcp-server/
 | `ORA-12541: TNS:no listener` | Oracle no accessible | Verificar HOST, PORT y que el listener esté activo |
 | `ORA-12154: TNS:could not resolve connect identifier` | SID/SERVICE_NAME incorrecto | Verificar ORACLE_SID o ORACLE_SERVICE_NAME |
 
-## 10. Próximos pasos sugeridos
+## 11. Próximos pasos sugeridos
 
 - Agregar paginación real (cursor/offset) en `run_query` si necesitas
   recorrer resultados grandes en varias llamadas.
