@@ -26,7 +26,7 @@
   .\set-secrets.ps1 -Name facturacion
 
 .EXAMPLE
-  .\set-secrets.ps1 -Name facturacion -User mi_usuario
+  .\set-secrets.ps1 -Name facturacion -User your_user
 
 .EXAMPLE
   .\set-secrets.ps1 -Name facturacion -Unset

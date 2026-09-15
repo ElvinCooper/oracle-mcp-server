@@ -1,10 +1,22 @@
 # oracle-mcp-server
 
-Servidor MCP (Model Context Protocol) en Python para conectar a **Oracle 11g**
-usando `python-oracledb` en **modo thick** (obligatorio en 11g, ya que el modo
-thin del driver solo soporta Oracle 12.1+). Pensado para usarse desde
-[opencode](https://opencode.ai) u otro cliente MCP compatible con servidores
-locales (stdio).
+[![CI](https://github.com/ElvinCooper/oracle-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/ElvinCooper/oracle-mcp-server/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> Repositorio: [github.com/ElvinCooper/oracle-mcp-server](https://github.com/ElvinCooper/oracle-mcp-server)
+
+**Oracle Database MCP Server**: servidor MCP (Model Context Protocol) en
+**Python** que permite a agentes de IA y clientes compatibles con MCP
+interactuar con bases **Oracle Database** a través de **`python-oracledb`**.
+
+> A Python-based Model Context Protocol (MCP) server that enables AI coding
+> agents and MCP-compatible clients to interact with Oracle Database
+> environments through python-oracledb.
+
+Usa `python-oracledb` en **modo thick** con **Oracle Instant Client**, con
+soporte orientado a **entornos Oracle antiguos, incluido Oracle 11g** (el modo
+thin del driver solo soporta Oracle 12.1+; las versiones posteriores dependen
+del soporte del propio driver). Ver [Notas sobre Oracle 11g y modo thick](#8-notas-sobre-oracle-11g-y-modo-thick).
 
 **Soporta múltiples conexiones a Oracle** y funciona con cualquier cliente MCP: opencode, Claude Code, Cursor, Codex, Continue.dev, etc.
 
@@ -56,15 +68,35 @@ la lista (conexión por defecto).
   incluye `row_count`, `truncated` (si quedaron filas sin devolver) y
   `limit_applied`.
 
-### Seguridad por diseño
+### Seguridad
 
-- Por defecto **solo lectura**: `run_query` valida que la sentencia empiece
-  con `SELECT`/`WITH` y rechaza múltiples sentencias separadas por `;`.
-- `execute_statement` está bloqueada salvo que definas
-  `ORACLE_CONN_<NOMBRE>_ALLOW_WRITE=true` (o `ORACLE_ALLOW_WRITE=true` en el
-  modo legacy) en el entorno **y** pases `confirm=true` en la llamada (doble
-  seguro).
-- Las credenciales viven en variables de entorno, nunca hardcodeadas.
+#### Operaciones de lectura (read-only)
+
+`run_query` está diseñada para **operaciones de lectura** y valida cada
+consulta: exige que la sentencia comience con `SELECT` o `WITH` y rechaza
+múltiples sentencias separadas por `;`, bloqueando por diseño intentos de
+inyección con sentencias de escritura encadenadas.
+
+#### Operaciones de escritura (write operations)
+
+`execute_statement` ejecuta `INSERT/UPDATE/DELETE/DDL` y está **bloqueada por
+defecto**. Habilitarla requiere **dos condiciones explícitas**:
+
+1. **Configuración:** `ORACLE_CONN_<NOMBRE>_ALLOW_WRITE=true` (o
+   `ORACLE_ALLOW_WRITE=true` en modo legacy), definida **por conexión**.
+2. **Llamada:** pasar `confirm=true` en cada invocación.
+
+El permiso se configura de forma explícita y auditable en cada conexión, y
+además se confirma en cada uso (un **doble seguro**). Habilitar operaciones de
+escritura debe ser una **decisión consciente**: por defecto todas las
+conexiones son de solo lectura y se recomienda conservar `ALLOW_WRITE=false`
+salvo que una conexión específica realmente lo requiera.
+
+#### Credenciales
+
+Las credenciales viven en variables de entorno (o en el archivo `.env`), **nunca
+hardcodeadas** en el código, y en este documento se muestran únicamente
+placeholders de ejemplo (`your_user`, `your_password`).
 
 ## 1. Requisitos previos
 
@@ -96,6 +128,12 @@ source .venv/bin/activate        # Linux/Mac
 pip install -e .
 ```
 
+> **Nota de versiones:** el proyecto usa la API de **MCP 1.x**
+> (`mcp.server.fastmcp`). Tanto `pyproject.toml` como `requirements.txt`
+> fijan `mcp>=1.6.0,<2` para evitar que una instalación resuelva `mcp` 2.x
+> (que eliminó esa API). Si en tu entorno aparece `mcp` 2.x, reinstala con el
+> pin: `pip install -e ".[dev]"` (o `pip install "mcp>=1.6.0,<2"`).
+
 ## 3. Configuración
 
 ### Opción A: Múltiples conexiones (Recomendado)
@@ -113,9 +151,9 @@ Formato para múltiples conexiones:
 ORACLE_CONNECTIONS=facturacion,clinica
 
 # Conexion "facturacion"
-ORACLE_CONN_FACTURACION_USER=mi_usuario
-ORACLE_CONN_FACTURACION_PASSWORD=mi_password
-ORACLE_CONN_FACTURACION_HOST=192.168.1.10
+ORACLE_CONN_FACTURACION_USER=your_user
+ORACLE_CONN_FACTURACION_PASSWORD=your_password
+ORACLE_CONN_FACTURACION_HOST=your_oracle_host
 ORACLE_CONN_FACTURACION_PORT=1521
 ORACLE_CONN_FACTURACION_SID=ORCL
 ORACLE_CONN_FACTURACION_CLIENT_LIB_DIR=/opt/oracle/instantclient_11_2
@@ -123,9 +161,9 @@ ORACLE_CONN_FACTURACION_ALLOW_WRITE=false
 ORACLE_CONN_FACTURACION_MAX_ROWS=200
 
 # Conexion "clinica"
-ORACLE_CONN_CLINICA_USER=clinica_user
-ORACLE_CONN_CLINICA_PASSWORD=clinica_pass
-ORACLE_CONN_CLINICA_HOST=192.168.1.20
+ORACLE_CONN_CLINICA_USER=your_user
+ORACLE_CONN_CLINICA_PASSWORD=your_password
+ORACLE_CONN_CLINICA_HOST=your_oracle_host
 ORACLE_CONN_CLINICA_PORT=1521
 ORACLE_CONN_CLINICA_SID=ORCL
 ORACLE_CONN_CLINICA_CLIENT_LIB_DIR=/opt/oracle/instantclient_11_2
@@ -136,9 +174,9 @@ ORACLE_CONN_CLINICA_CLIENT_LIB_DIR=/opt/oracle/instantclient_11_2
 Si `ORACLE_CONNECTIONS` no está definido, el servidor busca variables legacy:
 
 ```bash
-ORACLE_USER=mi_usuario
-ORACLE_PASSWORD=mi_password
-ORACLE_HOST=192.168.1.10
+ORACLE_USER=your_user
+ORACLE_PASSWORD=your_password
+ORACLE_HOST=your_oracle_host
 ORACLE_PORT=1521
 ORACLE_SID=ORCL
 ORACLE_CLIENT_LIB_DIR=/opt/oracle/instantclient_11_2
@@ -244,14 +282,14 @@ sistema y el resto de la configuración en el `.env`. Ejemplo para la conexión
 
 ```powershell
 # Windows (scope "User": solo tu usuario de Windows)
-[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_USER", "mi_usuario", "User")
-[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_PASSWORD", "mi_password", "User")
+[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_USER", "your_user", "User")
+[Environment]::SetEnvironmentVariable("ORACLE_CONN_FACTURACION_PASSWORD", "your_password", "User")
 ```
 
 ```bash
 # Linux / Mac (agrega a ~/.bashrc o ~/.zshrc y recarga: source ~/.bashrc)
-export ORACLE_CONN_FACTURACION_USER="mi_usuario"
-export ORACLE_CONN_FACTURACION_PASSWORD="mi_password"
+export ORACLE_CONN_FACTURACION_USER="your_user"
+export ORACLE_CONN_FACTURACION_PASSWORD="your_password"
 ```
 
 **Opción B — Referencia desde el `.env` (nombre libre):**
@@ -283,7 +321,26 @@ También puedes usar los scripts `set-secrets.ps1` (Windows) y `set-secrets.sh`
 (Linux/Mac) incluidos en el proyecto para fijar usuario y contraseña de forma
 interactiva.
 
-## 4. Probarlo de forma independiente
+## 4. Pruebas
+
+La suite usa **pytest** y **no necesita Oracle**: `test_server.py` sustituye
+los pool/cursor de la base por dobles en memoria.
+
+```bash
+pip install -e ".[dev]"   # instala pytest y las dependencias de desarrollo
+pytest                    # o: python -m pytest
+```
+
+Son **114 tests** que cubren: carga legacy y multi-conexión, omisión de
+conexiones incompletas (tolerancia), DSN por SID / SERVICE_NAME, validación
+solo-`SELECT` y doble confirmación de escritura (`ALLOW_WRITE` + `confirm`),
+serialización de LOBs y las 5 tools del servidor (conexión por defecto,
+`max_rows` y truncado incluidos).
+
+En **CI** (GitHub Actions) la suite corre en Python 3.10–3.12 y un segundo job
+verifica que el paquete se construye con `python -m build`.
+
+## 5. Probarlo de forma independiente
 
 Puedes levantar el servidor manualmente para verificar que conecta:
 
@@ -307,7 +364,7 @@ Si ves en el log `Pools Oracle listos: N` seguido de
 en thick mode funcionó. El proceso queda esperando mensajes MCP por stdio
 (Ctrl+C para salir).
 
-## 5. Integración con clientes MCP
+## 6. Integración con clientes MCP
 
 El servidor se comunica por **STDIO** (estándar en MCP para procesos locales).
 Cada cliente MCP tiene su propia configuración; aquí están las más comunes.
@@ -333,15 +390,15 @@ Define el servidor en el bloque `mcp` de `opencode.json` (o `~/.config/opencode/
       "enabled": true,
       "environment": {
         "ORACLE_CONNECTIONS": "facturacion,clinica",
-        "ORACLE_CONN_FACTURACION_USER": "mi_usuario",
-        "ORACLE_CONN_FACTURACION_PASSWORD": "mi_password",
-        "ORACLE_CONN_FACTURACION_HOST": "192.168.1.10",
+        "ORACLE_CONN_FACTURACION_USER": "your_user",
+        "ORACLE_CONN_FACTURACION_PASSWORD": "your_password",
+        "ORACLE_CONN_FACTURACION_HOST": "your_oracle_host",
         "ORACLE_CONN_FACTURACION_PORT": "1521",
         "ORACLE_CONN_FACTURACION_SID": "ORCL",
         "ORACLE_CONN_FACTURACION_CLIENT_LIB_DIR": "C:/oracle/instantclient_11_2",
-        "ORACLE_CONN_CLINICA_USER": "clinica_user",
-        "ORACLE_CONN_CLINICA_PASSWORD": "clinica_pass",
-        "ORACLE_CONN_CLINICA_HOST": "192.168.1.20",
+        "ORACLE_CONN_CLINICA_USER": "your_user",
+        "ORACLE_CONN_CLINICA_PASSWORD": "your_password",
+        "ORACLE_CONN_CLINICA_HOST": "your_oracle_host",
         "ORACLE_CONN_CLINICA_PORT": "1521",
         "ORACLE_CONN_CLINICA_SID": "ORCL",
         "ORACLE_CONN_CLINICA_CLIENT_LIB_DIR": "C:/oracle/instantclient_11_2"
@@ -370,9 +427,9 @@ Agrega el servidor en `.claude.json` (en la raíz del proyecto o global en `%USE
       "args": ["-m", "oracle_mcp.server"],
       "env": {
         "ORACLE_CONNECTIONS": "facturacion",
-        "ORACLE_CONN_FACTURACION_USER": "mi_usuario",
-        "ORACLE_CONN_FACTURACION_PASSWORD": "mi_password",
-        "ORACLE_CONN_FACTURACION_HOST": "192.168.1.10",
+        "ORACLE_CONN_FACTURACION_USER": "your_user",
+        "ORACLE_CONN_FACTURACION_PASSWORD": "your_password",
+        "ORACLE_CONN_FACTURACION_HOST": "your_oracle_host",
         "ORACLE_CONN_FACTURACION_PORT": "1521",
         "ORACLE_CONN_FACTURACION_SID": "ORCL",
         "ORACLE_CONN_FACTURACION_CLIENT_LIB_DIR": "C:\\oracle\\instantclient_11_2"
@@ -395,9 +452,9 @@ En `./cursor/mcp.json` del proyecto:
       "args": ["-m", "oracle_mcp.server"],
       "env": {
         "ORACLE_CONNECTIONS": "facturacion",
-        "ORACLE_CONN_FACTURACION_USER": "mi_usuario",
-        "ORACLE_CONN_FACTURACION_PASSWORD": "mi_password",
-        "ORACLE_CONN_FACTURACION_HOST": "192.168.1.10",
+        "ORACLE_CONN_FACTURACION_USER": "your_user",
+        "ORACLE_CONN_FACTURACION_PASSWORD": "your_password",
+        "ORACLE_CONN_FACTURACION_HOST": "your_oracle_host",
         "ORACLE_CONN_FACTURACION_PORT": "1521",
         "ORACLE_CONN_FACTURACION_SID": "ORCL",
         "ORACLE_CONN_FACTURACION_CLIENT_LIB_DIR": "C:\\oracle\\instantclient_11_2"
@@ -425,9 +482,9 @@ el que se arranque el proceso.
 
 - Usa la ruta **absoluta** al Python del `.venv`
 - Reinicia/recarga el cliente MCP después de editar la configuración
-- Puedes verificar que el servidor responde con el comando de prueba de la sección 4
+- Puedes verificar que el servidor responde con el comando de prueba de la sección 5
 
-## 6. Uso de múltiples conexiones
+## 7. Uso de múltiples conexiones
 
 Una vez configuradas las conexiones, puedes usarlas en las tools:
 
@@ -445,7 +502,7 @@ run_query("SELECT * FROM pacientes", connection="clinica")
 list_connections()
 ```
 
-## 7. Notas sobre Oracle 11g y modo thick
+## 8. Notas sobre Oracle 11g y modo thick
 
 - `oracledb.init_oracle_client(lib_dir=...)` se llama **una sola vez**,
   antes de abrir cualquier conexión (lo hace `db.py` automáticamente al
@@ -461,24 +518,35 @@ list_connections()
   `TNS_ADMIN` en `environment` dentro de `opencode.json` y ajustar `db.py`
   para usar `dsn` directamente por alias TNS en vez de `makedsn`.
 
-## 8. Estructura del proyecto
+## 9. Estructura del proyecto
 
 ```
 oracle-mcp-server/
+├── LICENSE
+├── README.md
 ├── pyproject.toml
+├── requirements.txt
 ├── setup.ps1      # Script de instalación automática (Windows)
 ├── .env.example
 ├── opencode.json.example
-├── README.md
-└── src/
-    └── oracle_mcp/
-        ├── __init__.py
-        ├── config.py     # Carga de variables de entorno (multi-conexión)
-        ├── db.py          # Init thick mode, multipools, validación SELECT-only
-        └── server.py      # Servidor MCP (FastMCP) con tools multi-conexión
+├── .github/
+│   └── workflows/
+│       └── ci.yml       # CI: tests (Python 3.10–3.12) y build del paquete
+├── src/
+│   └── oracle_mcp/
+│       ├── __init__.py
+│       ├── config.py     # Carga de variables de entorno (multi-conexión)
+│       ├── db.py          # Init thick mode, multipools, validación SELECT-only
+│       └── server.py      # Servidor MCP (FastMCP) con tools multi-conexión
+└── tests/
+    ├── helpers.py      # make_connection() con valores por defecto
+    ├── conftest.py     # limpia variables ORACLE_*/OX_* entre tests
+    ├── test_config.py  # carga de configuración legacy y multi-conexión
+    ├── test_db.py      # thick mode, validación, serialización de LOBs
+    └── test_server.py  # tools MCP con pools ficticios
 ```
 
-## 9. Solución de Problemas
+## 10. Solución de Problemas
 
 | Problema | Causa Común | Solución |
 |----------|-------------|----------|
@@ -489,7 +557,7 @@ oracle-mcp-server/
 | `ORA-12541: TNS:no listener` | Oracle no accessible | Verificar HOST, PORT y que el listener esté activo |
 | `ORA-12154: TNS:could not resolve connect identifier` | SID/SERVICE_NAME incorrecto | Verificar ORACLE_SID o ORACLE_SERVICE_NAME |
 
-## 10. Próximos pasos sugeridos
+## 11. Próximos pasos sugeridos
 
 - Agregar paginación real (cursor/offset) en `run_query` si necesitas
   recorrer resultados grandes en varias llamadas.
@@ -497,3 +565,8 @@ oracle-mcp-server/
   agregar un `ALLOWED_TABLES` o un usuario Oracle con permisos acotados
   (grant solo sobre las tablas necesarias) en vez de confiar únicamente en
   la validación de la tool.
+
+## 12. Licencia
+
+Este proyecto está bajo la licencia **MIT** (ver [LICENSE](LICENSE)).
+Copyright (c) 2026 Elvin Cooper.

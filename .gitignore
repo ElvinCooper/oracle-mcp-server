@@ -6,9 +6,17 @@ dist/
 wheels/
 *.egg-info
 
+# Tests / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
 # Virtual environments
 .venv
 .env 
 
 # archivos pesados
 instant-client/
+
+# uv (el proyecto se gestiona con pip; ignorar lock de uv)
+uv.lock

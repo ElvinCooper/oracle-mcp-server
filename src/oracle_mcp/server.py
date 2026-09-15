@@ -12,8 +12,8 @@ Soporta multiples conexiones a Oracle configuradas via variables de entorno.
 from __future__ import annotations
 
 import logging
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -41,10 +41,10 @@ class AppContext:
 async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     config = load_config()
     conn_mgr = OracleConnectionManager(config)
-    
+
     logger.info("Inicializando Oracle Client en modo thick y pool de conexiones...")
     conn_mgr.start()
-    
+
     logger.info("Conexiones Oracle disponibles: %d", len(config.connections))
     for conn in config.connections:
         logger.info("  - %s", conn.name)
@@ -55,7 +55,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
             len(config.skipped),
             ", ".join(config.skipped),
         )
-    
+
     try:
         yield AppContext(config=config, conn_mgr=conn_mgr)
     finally:
@@ -196,7 +196,7 @@ def execute_statement(
     """
     app = _ctx_app(ctx)
     conn_config = _get_connection_config(app, connection)
-    
+
     try:
         assert_write_allowed(sql, conn_config.allow_write)
     except QueryValidationError as exc:
