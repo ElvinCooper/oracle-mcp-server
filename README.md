@@ -310,7 +310,7 @@ solo-`SELECT` y doble confirmación de escritura (`ALLOW_WRITE` + `confirm`),
 serialización de LOBs y las 5 tools del servidor (conexión por defecto,
 `max_rows` y truncado incluidos).
 
-En **CI** (GitHub Actions) la suite corre en Python 3.10–3.14 y un segundo job
+En **CI** (GitHub Actions) la suite corre en Python 3.10–3.12 y un segundo job
 verifica que el paquete se construye con `python -m build`.
 
 ## 5. Probarlo de forma independiente
