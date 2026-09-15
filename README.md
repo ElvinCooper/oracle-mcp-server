@@ -1,9 +1,9 @@
 # oracle-mcp-server
 
-[![CI](https://github.com/TU_USUARIO/oracle-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/TU_USUARIO/oracle-mcp-server/actions/workflows/ci.yml)
+[![CI](https://github.com/ElvinCooper/oracle-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/ElvinCooper/oracle-mcp-server/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> Reemplaza `TU_USUARIO` por tu usuario de GitHub para que el badge de CI apunte a tu repositorio.
+> Repositorio: [github.com/ElvinCooper/oracle-mcp-server](https://github.com/ElvinCooper/oracle-mcp-server)
 
 **Oracle Database MCP Server**: servidor MCP (Model Context Protocol) en
 **Python** que permite a agentes de IA y clientes compatibles con MCP
