@@ -7,7 +7,11 @@ MCP server (Python) that exposes Oracle 11g databases to MCP clients over stdio 
 - Bootstrap: `.\setup.ps1` — creates `.venv`, runs `pip install -e .`, copies `.env.example` to `.env` if missing.
 - Run server: `.\\.venv\\Scripts\\oracle-mcp` or `.\\.venv\\Scripts\\python -m oracle_mcp.server`.
 - Healthy startup logs `Pools Oracle listos: N` then `Conexiones Oracle disponibles: N`.
-- **No tests, no linter/typecheck, no CI exist.** Verify changes by launching the server; this requires live network access to the configured Oracle DBs (there is no offline test path).
+- Verify changes offline with `pytest` (114 tests; they stub the Oracle pools/cursors in memory, so **no DB or network needed**).
+- Lint with `ruff check src tests` (config in `pyproject.toml`, `E501` ignored). No typecheck exists.
+- Dev deps (`pytest`, `ruff`) are **not** installed by `setup.ps1` — install once with `.\\.venv\\Scripts\\python -m pip install -e ".[dev]"`.
+- CI (`.github/workflows/ci.yml`) runs `ruff check src tests` + `pytest` on Python 3.10–3.12 and builds sdist/wheel; it never touches a real Oracle DB.
+- The only live check is manual: launching the server requires real network access to the configured Oracle DBs (see the startup log lines above).
 - Set individual connection credentials as Windows User-scope env vars (avoids plaintext in `.env`) with `.\set-secrets.ps1 -Name <connection>` (or `-Unset`).
 
 ## Codebase

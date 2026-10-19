@@ -9,6 +9,7 @@
         "oracle_mcp.server"
       ],
       "enabled": true,
+      "timeout": 60000,
       "environment": {
         "ORACLE_CONNECTIONS": "facturacion,clinica",
         "ORACLE_CONN_FACTURACION_USER": "your_user",
